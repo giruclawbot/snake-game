@@ -1,17 +1,268 @@
 <!doctype html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Snake Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Snake Game 🐍 — Juega Gratis Online</title>
+  <meta name="description" content="Juega Snake clásico en tu navegador, gratis y sin instalación. Compatible con móvil y escritorio. ¡A ver hasta cuánto llegas!" />
+  <meta name="keywords" content="snake game, juego serpiente, snake online, juego gratis, arcade" />
+  <meta name="robots" content="index, follow" />
+  <meta name="author" content="Giru 👾" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Snake Game 🐍 — Juega Gratis Online" />
+  <meta property="og:description" content="Juega Snake clásico en tu navegador, gratis y sin instalación." />
+  <meta property="og:locale" content="es_MX" />
+  <meta property="og:site_name" content="Snake Game" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Snake Game 🐍" />
+  <meta name="twitter:description" content="Juega Snake clásico en tu navegador, gratis y sin instalación." />
+
+  <!-- Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Snake Game",
+    "description": "Juego de Snake clásico para navegador, compatible con móvil.",
+    "applicationCategory": "Game",
+    "operatingSystem": "Web",
+    "inLanguage": "es"
+  }
+  </script>
+
   <style>
-    body{margin:0;background:#0b1020;color:#fff;font-family:system-ui,Segoe UI,Roboto}
-    canvas{display:block;margin:0 auto;background:#111;border:1px solid #333}
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --green: #2ecc71;
+      --green-dark: #27ae60;
+      --red: #e74c3c;
+      --yellow: #f7c548;
+      --text: #e6edf3;
+      --muted: #8b949e;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, Roboto, sans-serif;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      padding: 1.2em 1em 0.5em;
+    }
+    header h1 {
+      font-size: clamp(1.4em, 5vw, 2em);
+      color: var(--green);
+      letter-spacing: 0.04em;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.85em;
+      margin-top: 0.2em;
+    }
+
+    .game-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8em;
+      padding: 0.8em 1em 1.5em;
+    }
+
+    .scoreboard {
+      display: flex;
+      gap: 2em;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.6em 2em;
+      font-size: 0.95em;
+    }
+    .score-item { text-align: center; }
+    .score-item span {
+      display: block;
+      font-size: 1.6em;
+      font-weight: 700;
+      color: var(--yellow);
+      line-height: 1.1;
+    }
+    .score-item small {
+      color: var(--muted);
+      font-size: 0.7em;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    #game {
+      display: block;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(46, 204, 113, 0.1);
+      max-width: 100%;
+      touch-action: none;
+    }
+
+    /* Overlay (start / game-over / pause) */
+    .canvas-container {
+      position: relative;
+      display: inline-block;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: rgba(13, 17, 23, 0.88);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6em;
+      backdrop-filter: blur(2px);
+    }
+    #overlay h2 {
+      font-size: 1.8em;
+      color: var(--yellow);
+    }
+    #overlay p {
+      color: var(--muted);
+      font-size: 0.9em;
+    }
+    #overlay button {
+      margin-top: 0.4em;
+      padding: 0.6em 2em;
+      background: var(--green);
+      color: #0d1117;
+      border: none;
+      border-radius: 50px;
+      font-size: 1em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    #overlay button:hover { background: var(--green-dark); transform: scale(1.03); }
+
+    /* Mobile D-pad */
+    .dpad {
+      display: grid;
+      grid-template-areas:
+        ". up ."
+        "left . right"
+        ". down .";
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(3, 60px);
+      gap: 4px;
+    }
+    .dpad button {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1.4em;
+      cursor: pointer;
+      transition: background 0.1s, transform 0.1s;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dpad button:active { background: #2d333b; transform: scale(0.92); }
+    .dpad .up    { grid-area: up; }
+    .dpad .left  { grid-area: left; }
+    .dpad .right { grid-area: right; }
+    .dpad .down  { grid-area: down; }
+
+    .controls-row {
+      display: flex;
+      gap: 1em;
+      align-items: center;
+    }
+    .btn-pause {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.85em;
+      padding: 0.5em 1.2em;
+      cursor: pointer;
+      transition: background 0.1s;
+      touch-action: manipulation;
+    }
+    .btn-pause:hover { background: #2d333b; }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.78em;
+      text-align: center;
+    }
+
+    /* Hide dpad on desktop, show keyboard hint */
+    @media (pointer: fine) {
+      .dpad { display: none; }
+      .mobile-only { display: none; }
+    }
+    @media (pointer: coarse) {
+      .desktop-only { display: none; }
+    }
   </style>
 </head>
 <body>
-  <h1 style="text-align:center">Snake Game</h1>
-  <canvas id="game" width="420" height="420"></canvas>
-  <p style="text-align:center;">Use arrow keys to move. Press P to pause.</p>
+  <header>
+    <h1>🐍 Snake Game</h1>
+    <p>Clásico arcade — ¡a ver hasta dónde llegas!</p>
+  </header>
+
+  <div class="game-wrapper">
+    <div class="scoreboard">
+      <div class="score-item">
+        <span id="score">0</span>
+        <small>Puntos</small>
+      </div>
+      <div class="score-item">
+        <span id="best">0</span>
+        <small>Récord</small>
+      </div>
+    </div>
+
+    <div class="canvas-container">
+      <canvas id="game" width="400" height="400"></canvas>
+      <div id="overlay">
+        <h2>🐍 Snake</h2>
+        <p class="desktop-only">Usa las teclas de dirección para moverte</p>
+        <p class="mobile-only">Usa el D-pad para moverte</p>
+        <button id="start-btn">▶ Jugar</button>
+      </div>
+    </div>
+
+    <!-- Mobile D-pad -->
+    <div class="dpad" aria-label="Controles direccionales">
+      <button class="up"    aria-label="Arriba"    id="btn-up">▲</button>
+      <button class="left"  aria-label="Izquierda" id="btn-left">◀</button>
+      <button class="right" aria-label="Derecha"   id="btn-right">▶</button>
+      <button class="down"  aria-label="Abajo"     id="btn-down">▼</button>
+    </div>
+
+    <div class="controls-row">
+      <button class="btn-pause" id="pause-btn">⏸ Pausar</button>
+    </div>
+
+    <p class="hint desktop-only">Flechas del teclado para moverse · P para pausar</p>
+    <p class="hint mobile-only">Toca el D-pad para moverte</p>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
